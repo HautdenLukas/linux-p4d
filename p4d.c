@@ -1844,10 +1844,10 @@ int P4d::meanwhile()
 
    tell(3, "loop ...");
 
-   webSock->service();       // takes around 1 second :o
+//   webSock->service();       // takes around 1 second :o
    dispatchClientRequest();
-   webSock->performData(cWebSock::mtData);
-   performWebSocketPing();
+//   webSock->performData(cWebSock::mtData);
+//   performWebSocketPing();
 
    return done;
 }

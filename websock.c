@@ -127,11 +127,11 @@ int cWebSock::init(int aPort, int aTimeout)
    threadCtl.webSock = this;
    threadCtl.timeout = timeout;
 
-   // if (pthread_create(&syncThread, NULL, syncFct, &threadCtl))
-   // {
-   //    tell(0, "Error: Failed to start client daemon thread");
-   //    return fail;
-   // }
+   if (pthread_create(&syncThread, NULL, syncFct, &threadCtl))
+   {
+      tell(0, "Error: Failed to start client daemon thread");
+      return fail;
+   }
 
    return success;
 }
@@ -173,8 +173,6 @@ int cWebSock::exit()
 
 void* cWebSock::syncFct(void* user)
 {
-//   static time_t nextWebSocketPing {0};
-
    ThreadControl* threadCtl = (ThreadControl*)user;
    threadCtl->active = true;
 
@@ -182,7 +180,7 @@ void* cWebSock::syncFct(void* user)
 
    while (!threadCtl->close)
    {
-      service();
+      service(threadCtl);
    }
 
    threadCtl->active = false;
@@ -195,13 +193,23 @@ void* cWebSock::syncFct(void* user)
 // Service
 //***************************************************************************
 
-int cWebSock::service()
+int cWebSock::service(ThreadControl* threadCtl)
 {
+   static time_t nextWebSocketPing {0};
+
 #if defined (LWS_LIBRARY_VERSION_MAJOR) && (LWS_LIBRARY_VERSION_MAJOR >= 4)
    lws_service(context, 0);    // timeout parameter is not supported by the lib anymore
 #else
    lws_service(context, 100);
 #endif
+
+   threadCtl->webSock->performData(cWebSock::mtData);
+
+   if (nextWebSocketPing < time(0))
+   {
+      threadCtl->webSock->performData(cWebSock::mtPing);
+      nextWebSocketPing = time(0) + threadCtl->timeout-5;
+   }
 
    return done;
 }
